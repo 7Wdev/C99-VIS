@@ -95,7 +95,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-1.5 content-start flex-grow">
+        <div className="grid grid-cols-2 gap-1.5 content-start flex-grow overflow-y-auto custom-scrollbar pr-1 max-h-[180px]">
           {currentState ? (
             Object.entries(currentState.vars).map(([k, v]) => {
               // Skip arrays here as they are shown in the right panel
