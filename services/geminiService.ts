@@ -139,7 +139,7 @@ export class SimulationSession {
 
     try {
       this.chat = this.ai.chats.create({
-        model: "gemini-3.0-flash-preview",
+        model: "gemini-3-flash-preview",
         config: {
           systemInstruction: SYSTEM_PROMPT,
           responseMimeType: "application/json",
