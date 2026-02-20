@@ -1,0 +1,5 @@
+{
+  "name": "Recursion Visualizer",
+  "description": "An AI-powered interactive visualizer for backtracking and recursion algorithms.",
+  "requestFramePermissions": []
+}
