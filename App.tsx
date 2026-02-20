@@ -894,6 +894,7 @@ const App: React.FC = () => {
                     cx={node.cx}
                     cy={node.cy}
                     r={node.r}
+                    initial={{ r: node.r, opacity: 0.6 }}
                     fill={
                       node.color === "red"
                         ? "#ff1744"

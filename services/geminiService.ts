@@ -110,9 +110,14 @@ export class SimulationSession {
           error?.message?.includes("429") ||
           error?.status === 429 ||
           error?.code === 429;
-        if (isRateLimit && i < maxRetries - 1) {
+
+        const isParseError =
+          error?.message?.includes("JSON") ||
+          error?.message?.includes("Failed to parse");
+
+        if ((isRateLimit || isParseError) && i < maxRetries - 1) {
           console.warn(
-            `Rate limit hit. Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`,
+            `${isRateLimit ? "Rate limit hit" : "JSON Parse Error"}. Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`,
           );
           await new Promise((resolve) => setTimeout(resolve, delay));
           delay *= 2; // Exponential backoff
@@ -139,7 +144,7 @@ export class SimulationSession {
 
     try {
       this.chat = this.ai.chats.create({
-        model: "gemini-3-flash-preview",
+        model: "gemini-3.1-pro-preview",
         config: {
           systemInstruction: SYSTEM_PROMPT,
           responseMimeType: "application/json",
