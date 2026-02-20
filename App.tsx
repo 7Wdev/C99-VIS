@@ -641,10 +641,10 @@ const App: React.FC = () => {
               opacity: 0,
               transition: { duration: 0.8, ease: "easeInOut" },
             }}
-            className="fixed inset-0 z-[150] flex flex-col items-center justify-center overflow-hidden bg-[#050505] font-sans text-white/90"
+            className="fixed inset-0 z-[150] flex flex-col items-center justify-center overflow-hidden bg-slate-50 dark:bg-[#050505] font-sans text-slate-900 dark:text-white/90"
           >
             {/* Background Vignettting */}
-            <div className="absolute inset-0 z-0 bg-gradient-to-radial from-transparent via-[#050505]/80 to-[#020202] pointer-events-none" />
+            <div className="absolute inset-0 z-0 bg-gradient-to-radial from-transparent via-slate-200/50 to-slate-300/80 dark:via-[#050505]/80 dark:to-[#020202] pointer-events-none" />
 
             {/* --- Animated Neural Network SVG --- */}
             <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center opacity-80 mix-blend-screen overflow-visible">
@@ -690,9 +690,15 @@ const App: React.FC = () => {
                     x2="100%"
                     y2="0%"
                   >
-                    <stop offset="0%" stopColor="#111" />
+                    <stop
+                      offset="0%"
+                      stopColor={isDarkMode ? "#111" : "#e2e8f0"}
+                    />
                     <stop offset="50%" stopColor="#ff1744" />
-                    <stop offset="100%" stopColor="#111" />
+                    <stop
+                      offset="100%"
+                      stopColor={isDarkMode ? "#111" : "#e2e8f0"}
+                    />
                   </linearGradient>
                 </defs>
 
@@ -730,7 +736,7 @@ const App: React.FC = () => {
                     {/* Base dim connection line */}
                     <path
                       d={conn.path}
-                      stroke="#222"
+                      stroke={isDarkMode ? "#222" : "#cbd5e1"}
                       strokeWidth="1.5"
                       fill="none"
                     />
@@ -867,7 +873,13 @@ const App: React.FC = () => {
                     cx={node.cx}
                     cy={node.cy}
                     r={node.r}
-                    fill={node.color === "red" ? "#ff1744" : "#ffffff"}
+                    fill={
+                      node.color === "red"
+                        ? "#ff1744"
+                        : isDarkMode
+                          ? "#ffffff"
+                          : "#1e293b"
+                    }
                     filter={`url(#${node.glow})`}
                     animate={{
                       r: [node.r, node.r * 1.4, node.r],
@@ -893,10 +905,10 @@ const App: React.FC = () => {
                 transition={{ duration: 0.8, delay: 0.2 }}
                 className="flex items-center gap-4 mb-3"
               >
-                <div className="p-2.5 bg-red-600/20 rounded-2xl border border-red-500/30 backdrop-blur-md">
+                <div className="p-2.5 bg-red-600/10 dark:bg-red-600/20 rounded-2xl border border-red-500/20 dark:border-red-500/30 backdrop-blur-md">
                   <Cpu size={32} className="text-red-500" />
                 </div>
-                <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/50 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-slate-800 via-slate-600 to-slate-500 dark:from-white dark:via-white dark:to-white/50 drop-shadow-[0_0_15px_rgba(0,0,0,0.05)] dark:drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
                   Simulating Execution
                 </h1>
               </motion.div>
@@ -905,7 +917,7 @@ const App: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
-                className="text-lg text-white/50 font-medium mb-10 text-center max-w-lg leading-relaxed"
+                className="text-lg text-slate-500 dark:text-white/50 font-medium mb-10 text-center max-w-lg leading-relaxed"
               >
                 Traversing recursive pathways and extracting logic states via
                 Gemini API.
@@ -922,7 +934,7 @@ const App: React.FC = () => {
                   <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-red-500/80 mb-1">
                     Current Batch
                   </span>
-                  <div className="text-3xl font-mono font-light text-white flex items-baseline">
+                  <div className="text-3xl font-mono font-light text-slate-800 dark:text-white flex items-baseline">
                     <motion.span
                       key={simulationProgress.batches}
                       initial={{ y: -10, opacity: 0 }}
@@ -934,17 +946,20 @@ const App: React.FC = () => {
                 </div>
 
                 {/* Vertical Divider */}
-                <div className="w-px h-12 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
+                <div className="w-px h-12 bg-gradient-to-b from-transparent via-slate-300 dark:via-white/20 to-transparent" />
 
                 <div className="flex flex-col items-center">
-                  <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/40 mb-1">
+                  <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-slate-400 dark:text-white/40 mb-1">
                     Steps Decoded
                   </span>
-                  <div className="text-3xl font-mono font-light text-white flex items-baseline gap-1">
+                  <div className="text-3xl font-mono font-light text-slate-800 dark:text-white flex items-baseline gap-1">
                     <motion.span
                       key={simulationProgress.steps}
                       initial={{ scale: 1.2, color: "#ff1744" }}
-                      animate={{ scale: 1, color: "#ffffff" }}
+                      animate={{
+                        scale: 1,
+                        color: isDarkMode ? "#ffffff" : "#1e293b",
+                      }}
                     >
                       {simulationProgress.steps}
                     </motion.span>
@@ -957,7 +972,7 @@ const App: React.FC = () => {
                 initial={{ width: 0, opacity: 0 }}
                 animate={{ width: "100%", opacity: 1 }}
                 transition={{ duration: 1, delay: 0.8 }}
-                className="w-full max-w-md h-px bg-white/10 relative overflow-hidden"
+                className="w-full max-w-md h-px bg-slate-200 dark:bg-white/10 relative overflow-hidden"
               >
                 {/* The "Head" of the progress */}
                 <motion.div

@@ -139,7 +139,7 @@ export class SimulationSession {
 
     try {
       this.chat = this.ai.chats.create({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-3.0-flash-preview",
         config: {
           systemInstruction: SYSTEM_PROMPT,
           responseMimeType: "application/json",
@@ -186,7 +186,7 @@ export class SimulationSession {
       return await this.retryWithBackoff(async () => {
         const response = await this.chat.sendMessage({
           message:
-            "Continue simulation. Generate the next batch of steps. Remember to maintain state and tree consistency. CRITICAL INSTRUCTION: Aim for around 40-70+ steps per batch depending on code complexity to ensure you do not exceed output token limits and produce valid, complete JSON. You must properly close the JSON object.",
+            "Continue simulation. Generate the next batch of steps. Remember to maintain state and tree consistency. CRITICAL INSTRUCTION: Aim for literally 10 to 20 steps per batch to ensure extremely fast response times and produce valid, complete JSON. You must properly close the JSON object.",
         });
 
         const text = response.text;
