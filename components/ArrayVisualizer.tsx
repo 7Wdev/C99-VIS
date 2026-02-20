@@ -64,7 +64,8 @@ const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
     return (
       COMMON_POINTER_NAMES.has(lowerKey) ||
       lowerKey.includes("ptr") ||
-      lowerKey.includes("idx")
+      lowerKey.includes("idx") ||
+      /^[a-zA-Z]\d+$/.test(lowerKey) // Matches variables like n1, n2, p1, x2
     );
   });
 

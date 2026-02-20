@@ -94,10 +94,26 @@ const App: React.FC = () => {
   const [customApiKey, setCustomApiKey] = useState<string>(
     localStorage.getItem("gemini_api_key") || "",
   );
+  const [simModel, setSimModel] = useState<string>(
+    localStorage.getItem("gemini_sim_model") || "gemini-3.1-pro-preview",
+  );
+  const [chatModel, setChatModel] = useState<string>(
+    localStorage.getItem("gemini_chat_model") || "gemini-3.1-pro-preview",
+  );
 
   const saveApiKey = (key: string) => {
     setCustomApiKey(key);
     localStorage.setItem("gemini_api_key", key);
+  };
+
+  const saveSimModel = (model: string) => {
+    setSimModel(model);
+    localStorage.setItem("gemini_sim_model", model);
+  };
+
+  const saveChatModel = (model: string) => {
+    setChatModel(model);
+    localStorage.setItem("gemini_chat_model", model);
   };
 
   useEffect(() => {
@@ -140,7 +156,11 @@ const App: React.FC = () => {
       return;
     }
 
-    sessionRef.current = new SimulationSession(customApiKey);
+    sessionRef.current = new SimulationSession(
+      customApiKey,
+      simModel,
+      chatModel,
+    );
 
     // Call Gemini for the first batch
     let data = await sessionRef.current.start(code, inputVal);
@@ -1086,6 +1106,40 @@ const App: React.FC = () => {
                     placeholder="AIzaSy..."
                     className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-4 text-sm font-mono text-slate-800 dark:text-white focus:outline-none focus:border-red-500 transition placeholder-slate-400 dark:placeholder-slate-700 shadow-inner"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
+                    Simulation Model
+                  </label>
+                  <select
+                    value={simModel}
+                    onChange={(e) => saveSimModel(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-4 text-sm font-mono text-slate-800 dark:text-white focus:outline-none focus:border-red-500 transition shadow-inner"
+                  >
+                    <option value="gemini-3.1-pro-preview">
+                      gemini-3.1-pro-preview
+                    </option>
+                    <option value="gemini-3-flash-preview">
+                      gemini-3-flash-preview
+                    </option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
+                    Chat Model
+                  </label>
+                  <select
+                    value={chatModel}
+                    onChange={(e) => saveChatModel(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-4 text-sm font-mono text-slate-800 dark:text-white focus:outline-none focus:border-red-500 transition shadow-inner"
+                  >
+                    <option value="gemini-3.1-pro-preview">
+                      gemini-3.1-pro-preview
+                    </option>
+                    <option value="gemini-3-flash-preview">
+                      gemini-3-flash-preview
+                    </option>
+                  </select>
                 </div>
               </div>
               <div className="mt-8 flex justify-end">

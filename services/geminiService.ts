@@ -78,6 +78,38 @@ const normalizeData = (data: SimulationData): SimulationData => {
         });
       }
     }
+
+    // --- 3. TREE NODE NORMALIZATION ---
+    // If the model generates a step with a node ID that it forgot to place in the tree object,
+    // the D3 hierarchy layout will crash or render empty. We must inject a dummy node.
+    if (step.n && !data.tree[step.n]) {
+      console.warn(
+        `Node ${step.n} referenced in step ${i} but missing from tree. Normalizing.`,
+      );
+      // Find the previous step's node to attempt linking, otherwise attach to root/null
+      let parentNode = null;
+      if (i > 0 && steps[i - 1].n) parentNode = steps[i - 1].n;
+
+      data.tree[step.n] = {
+        l: "normalized node",
+        p: parentNode,
+        level:
+          parentNode && data.tree[parentNode]
+            ? data.tree[parentNode].level + 1
+            : 0,
+        children: [],
+        type: "standard",
+      };
+
+      // Also ensure the parent knows about this new child
+      if (parentNode && data.tree[parentNode]) {
+        if (!data.tree[parentNode].children)
+          data.tree[parentNode].children = [];
+        if (!data.tree[parentNode].children.includes(step.n)) {
+          data.tree[parentNode].children.push(step.n);
+        }
+      }
+    }
   }
 
   return data;
@@ -88,23 +120,29 @@ export class SimulationSession {
   private conversationalChat: any = null;
   private ai: GoogleGenAI | null = null;
   private sessionApiKey: string = "";
+  private simModel: string = "gemini-3.1-pro-preview";
+  private chatModel: string = "gemini-3.1-pro-preview";
 
-  constructor(customApiKey?: string) {
+  constructor(customApiKey?: string, simModel?: string, chatModel?: string) {
     this.sessionApiKey = customApiKey || defaultApiKey;
+    if (simModel) this.simModel = simModel;
+    if (chatModel) this.chatModel = chatModel;
     if (this.sessionApiKey) {
       this.ai = new GoogleGenAI({ apiKey: this.sessionApiKey });
     }
   }
 
   private async retryWithBackoff<T>(
-    operation: () => Promise<T>,
+    operation: (retryReason?: string) => Promise<T>,
     maxRetries: number = 3,
     initialDelay: number = 2000,
   ): Promise<T> {
     let delay = initialDelay;
+    let retryReason: string | undefined = undefined;
+
     for (let i = 0; i < maxRetries; i++) {
       try {
-        return await operation();
+        return await operation(retryReason);
       } catch (error: any) {
         const isRateLimit =
           error?.message?.includes("429") ||
@@ -119,6 +157,14 @@ export class SimulationSession {
           console.warn(
             `${isRateLimit ? "Rate limit hit" : "JSON Parse Error"}. Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`,
           );
+
+          if (isParseError) {
+            retryReason =
+              "CRITICAL: Your last response contained invalid JSON or was truncated. Please regenerate the exact same batch of steps, ensuring it is a single, perfectly valid, and cleanly closed JSON object.";
+          } else {
+            retryReason = undefined;
+          }
+
           await new Promise((resolve) => setTimeout(resolve, delay));
           delay *= 2; // Exponential backoff
         } else {
@@ -144,7 +190,7 @@ export class SimulationSession {
 
     try {
       this.chat = this.ai.chats.create({
-        model: "gemini-3.1-pro-preview",
+        model: this.simModel,
         config: {
           systemInstruction: SYSTEM_PROMPT,
           responseMimeType: "application/json",
@@ -152,8 +198,9 @@ export class SimulationSession {
         },
       });
 
-      return await this.retryWithBackoff(async () => {
-        const response = await this.chat.sendMessage({ message: userPrompt });
+      return await this.retryWithBackoff(async (retryReason) => {
+        const prompt = retryReason ? retryReason : userPrompt;
+        const response = await this.chat.sendMessage({ message: prompt });
         const text = response.text;
         if (!text) return null;
 
@@ -188,10 +235,17 @@ export class SimulationSession {
     if (!this.chat) return null;
 
     try {
-      return await this.retryWithBackoff(async () => {
+      const stepGuidance =
+        this.simModel === "gemini-3.1-pro-preview"
+          ? "Aim for 15 to 35 steps per batch"
+          : "Aim for literally 10 to 20 steps per batch";
+
+      return await this.retryWithBackoff(async (retryReason) => {
+        const prompt = retryReason
+          ? retryReason
+          : `Continue simulation. Generate the next batch of steps. Remember to maintain state and tree consistency. CRITICAL INSTRUCTION: ${stepGuidance} to ensure extremely fast response times and produce valid, complete JSON. You must properly close the JSON object.`;
         const response = await this.chat.sendMessage({
-          message:
-            "Continue simulation. Generate the next batch of steps. Remember to maintain state and tree consistency. CRITICAL INSTRUCTION: Aim for literally 10 to 20 steps per batch to ensure extremely fast response times and produce valid, complete JSON. You must properly close the JSON object.",
+          message: prompt,
         });
 
         const text = response.text;
@@ -259,7 +313,7 @@ IMPORTANT INSTRUCTIONS FOR YOUR PERSONA:
 5. Do NOT output JSON. Output perfectly formatted Markdown.`;
 
         this.conversationalChat = this.ai.chats.create({
-          model: "gemini-3.1-pro-preview",
+          model: this.chatModel,
           config: {
             systemInstruction,
           },
