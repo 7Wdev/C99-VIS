@@ -79,44 +79,117 @@ const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
     );
   }
 
+  // Helper to infer the true context and memory footprint of an array cell
+  const formatCellData = (val: any) => {
+    if (
+      val === "?" ||
+      (typeof val === "string" && val.toLowerCase().includes("garbage"))
+    ) {
+      return { display: "?", memory: "0x????", isGarbage: true };
+    }
+
+    // Characters (length 1 string)
+    if (typeof val === "string" && val.length === 1) {
+      const code = val.charCodeAt(0);
+      return {
+        display: `'${val}'`,
+        memory: `0b${code.toString(2).padStart(8, "0")}`,
+        isGarbage: false,
+      };
+    }
+
+    // Integers / Numbers
+    if (typeof val === "number") {
+      // Show as hex or binary based on size, let's stick to an 8-bit or 16-bit binary representation
+      const binStr = (val >>> 0).toString(2).slice(-8).padStart(8, "0");
+      return {
+        display: val.toString(),
+        memory: `0b${binStr}`,
+        isGarbage: false,
+      };
+    }
+
+    // Booleans
+    if (typeof val === "boolean") {
+      return {
+        display: val ? "true" : "false",
+        memory: val ? "0b00000001" : "0b00000000",
+        isGarbage: false,
+      };
+    }
+
+    // Color Hex Codes (e.g. "#FF0000")
+    if (typeof val === "string" && /^#[0-9A-Fa-f]{6}$/i.test(val)) {
+      return {
+        display: (
+          <div
+            className="w-4 h-4 rounded-sm shadow-sm border border-black/20"
+            style={{ backgroundColor: val }}
+            title={val}
+          />
+        ),
+        memory: val.toUpperCase(),
+        isGarbage: false,
+      };
+    }
+
+    // Fallback String context
+    return {
+      display: String(val),
+      memory: "...",
+      isGarbage: false,
+    };
+  };
+
   const render1DArray = (name: string, arr: any[]) => (
     <div className="flex items-start gap-1 p-2 bg-slate-50 dark:bg-black/20 rounded-2xl border border-slate-200 dark:border-white/5 w-fit shadow-inner">
       {arr.map((val: any, index: number) => {
         // Find all pointers pointing to this index
         const activePointers = pointers.filter(([_, pVal]) => pVal === index);
         const isRelevant = activePointers.length > 0;
-        const isGarbage =
-          val === "?" ||
-          (typeof val === "string" && val.toLowerCase().includes("garbage"));
+        const { display, memory, isGarbage } = formatCellData(val);
 
         return (
           <div
             key={index}
-            className="flex flex-col items-center gap-1 min-w-[32px] relative group"
+            className="flex flex-col items-center gap-1 min-w-[40px] relative group"
           >
-            {/* Array Cell */}
+            {/* Array Cell - Dual Layer */}
             <motion.div
               layoutId={`${name}-cell-${index}`}
               className={`
-                min-w-[2rem] w-auto px-1 h-8 border rounded-lg flex items-center justify-center text-[13px] font-bold font-mono relative z-10 shadow-sm transition-all duration-300
+                min-w-[3rem] w-auto h-12 border rounded-lg flex flex-col items-center justify-center relative z-10 shadow-sm transition-all duration-300 overflow-hidden
                 ${
                   isRelevant
-                    ? "bg-red-100 dark:bg-[#1e0a0a] border-red-300 dark:border-red-500/40 text-red-600 dark:text-white scale-110 z-20 shadow-[0_0_10px_rgba(239,68,68,0.2)]"
+                    ? "bg-red-100 dark:bg-[#1e0a0a] border-red-300 dark:border-red-500/40 scale-110 z-20 shadow-[0_0_10px_rgba(239,68,68,0.2)]"
                     : isGarbage
-                      ? "bg-white dark:bg-[#111111] border-slate-200 dark:border-white/5 text-slate-400 dark:text-slate-600"
-                      : "bg-white dark:bg-[#111111] border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300"
+                      ? "bg-white dark:bg-[#111111] border-slate-200 dark:border-white/5"
+                      : "bg-white dark:bg-[#111111] border-slate-300 dark:border-white/10"
                 }
               `}
             >
-              <motion.span
+              <motion.div
                 key={`${val}-${index}`}
                 initial={{ opacity: 0.5, y: 2 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.1 }}
-                className={isGarbage ? "italic" : ""}
+                className="flex flex-col items-center justify-center w-full h-full"
               >
-                {val}
-              </motion.span>
+                {/* Top Layer: Semantic Context */}
+                <span
+                  className={`text-[14px] font-bold font-mono leading-none pt-1 ${isGarbage ? "text-slate-400 dark:text-slate-600 py-2 italic" : isRelevant ? "text-red-600 dark:text-red-400" : "text-slate-800 dark:text-slate-200"}`}
+                >
+                  {display}
+                </span>
+                {/* Bottom Layer: Raw Memory Layout */}
+                {!isGarbage && (
+                  <div className="w-full bg-slate-100 dark:bg-white/5 border-t border-slate-200 dark:border-white/10 mt-1 pb-0.5 pointer-events-none">
+                    <span className="text-[7px] text-slate-400 dark:text-slate-500 font-mono tracking-tighter block text-center w-full px-1">
+                      {memory}
+                    </span>
+                  </div>
+                )}
+              </motion.div>
             </motion.div>
 
             {/* Index Label */}
@@ -179,34 +252,44 @@ const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
               });
 
               const isRelevant = activeCoords.length > 0;
-              const isGarbage =
-                val === "?" ||
-                (typeof val === "string" &&
-                  val.toLowerCase().includes("garbage"));
+              const { display, memory, isGarbage } = formatCellData(val);
 
               return (
                 <div key={`${rIndex}-${cIndex}`} className="relative group">
                   <motion.div
                     layoutId={`${name}-cell-${rIndex}-${cIndex}`}
                     className={`
-                      w-8 h-8 border rounded-lg flex items-center justify-center text-[13px] font-bold font-mono relative z-10 shadow-sm transition-all duration-300
+                      min-w-[3rem] w-[3rem] h-12 border rounded-lg flex flex-col items-center justify-center relative z-10 shadow-sm transition-all duration-300 overflow-hidden
                       ${
                         isRelevant
-                          ? "bg-red-100 dark:bg-[#1e0a0a] border-red-300 dark:border-red-500/40 text-red-600 dark:text-white scale-110 z-20 shadow-[0_0_10px_rgba(239,68,68,0.2)]"
+                          ? "bg-red-100 dark:bg-[#1e0a0a] border-red-300 dark:border-red-500/40 scale-110 z-20 shadow-[0_0_10px_rgba(239,68,68,0.2)]"
                           : isGarbage
-                            ? "bg-white dark:bg-[#111111] border-slate-200 dark:border-white/5 text-slate-400 dark:text-slate-600"
-                            : "bg-white dark:bg-[#111111] border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300"
+                            ? "bg-white dark:bg-[#111111] border-slate-200 dark:border-white/5"
+                            : "bg-white dark:bg-[#111111] border-slate-300 dark:border-white/10"
                       }
                     `}
                   >
-                    <motion.span
+                    <motion.div
                       key={`${val}-${rIndex}-${cIndex}`}
                       initial={{ opacity: 0.5, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className={isGarbage ? "italic" : ""}
+                      className="flex flex-col items-center justify-center w-full h-full"
                     >
-                      {val}
-                    </motion.span>
+                      {/* Top Layer: Semantic Context */}
+                      <span
+                        className={`text-[14px] font-bold font-mono leading-none pt-1 ${isGarbage ? "text-slate-400 dark:text-slate-600 py-2 italic" : isRelevant ? "text-red-600 dark:text-red-400" : "text-slate-800 dark:text-slate-200"}`}
+                      >
+                        {display}
+                      </span>
+                      {/* Bottom Layer: Raw Memory Layout */}
+                      {!isGarbage && (
+                        <div className="w-full bg-slate-100 dark:bg-white/5 border-t border-slate-200 dark:border-white/10 mt-1 pb-0.5 pointer-events-none">
+                          <span className="text-[6.5px] text-slate-400 dark:text-slate-500 font-mono tracking-tighter block text-center w-full px-0.5">
+                            {memory}
+                          </span>
+                        </div>
+                      )}
+                    </motion.div>
 
                     {/* Coordinate Tooltip on Hover */}
                     <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 dark:bg-black text-white text-[10px] font-bold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap z-50 shadow-xl border border-slate-600 dark:border-white/10">

@@ -182,7 +182,11 @@ const App: React.FC = () => {
       let sanityLimit = 0;
       while (!currentData.isComplete && sanityLimit < 20) {
         sanityLimit++;
-        const moreData = await sessionRef.current?.nextBatch();
+
+        // Grab the last 15 steps as a strict context window so the AI doesn't hallucinate jumps
+        const lastStepsContext = currentData.steps.slice(-15);
+
+        const moreData = await sessionRef.current?.nextBatch(lastStepsContext);
         if (!moreData) break;
 
         setSimData((prev) => {

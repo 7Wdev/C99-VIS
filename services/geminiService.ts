@@ -231,7 +231,7 @@ export class SimulationSession {
     }
   }
 
-  async nextBatch(): Promise<SimulationData | null> {
+  async nextBatch(lastStepsContext?: any[]): Promise<SimulationData | null> {
     if (!this.chat) return null;
 
     try {
@@ -241,9 +241,13 @@ export class SimulationSession {
           : "Aim for literally 10 to 20 steps per batch";
 
       return await this.retryWithBackoff(async (retryReason) => {
-        const prompt = retryReason
-          ? retryReason
-          : `Continue simulation. Generate the next batch of steps. Remember to maintain state and tree consistency. CRITICAL INSTRUCTION: ${stepGuidance} to ensure extremely fast response times and produce valid, complete JSON. You must properly close the JSON object.`;
+        let basePrompt = `Continue simulation. Generate the next batch of steps. Remember to maintain state and tree consistency. CRITICAL INSTRUCTION: ${stepGuidance} to ensure extremely fast response times and produce valid, complete JSON. You must properly close the JSON object.`;
+
+        if (lastStepsContext && lastStepsContext.length > 0) {
+          basePrompt += `\n\nCRITICAL CONTEXT - RECENT HISTORY:\nTo prevent execution jumps and desyncs, here are the VERY LAST ${lastStepsContext.length} steps that were executed right before this batch:\n\`\`\`json\n${JSON.stringify(lastStepsContext, null, 2)}\n\`\`\`\n\nYou MUST resume execution precisely on the very next logical line of code immediately following the final step in the history above. Do NOT repeat the last step. Do NOT jump to a random location. Maintain local variables exactly as they were left off!`;
+        }
+
+        const prompt = retryReason ? retryReason : basePrompt;
         const response = await this.chat.sendMessage({
           message: prompt,
         });
