@@ -40,6 +40,7 @@ interface ChatWidgetProps {
   currentStack?: any[]; // Pass down stack context from App
   currentLine?: number | null;
   currentStepIndex?: number;
+  consoleOutput?: string[];
 }
 
 const ChatWidget: React.FC<ChatWidgetProps> = ({
@@ -51,6 +52,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   currentStack,
   currentLine,
   currentStepIndex,
+  consoleOutput,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -176,19 +178,42 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
     let richPrompt =
       textContent || "Please describe these images in relation to the code.";
 
-    if (currentState && currentStack) {
+    if (currentState && currentStack && simData) {
       const activeLine = currentLine;
       const stackDepth = currentStack.length;
-      const activeVars = JSON.stringify(currentState.vars);
-      const stackTrace = JSON.stringify(currentStack);
+      const activeVars = JSON.stringify(currentState.vars, null, 2);
+      const stackTrace = JSON.stringify(currentStack, null, 2);
+
+      // Get the currently active tree node (the last step's node)
+      const currentNodeId = simData.steps[currentStepIndex ?? 0]?.n;
+      const treeNodeContext = currentNodeId
+        ? JSON.stringify(simData.tree[currentNodeId], null, 2)
+        : "N/A";
+
+      const stdoutCtx =
+        consoleOutput && consoleOutput.length > 0
+          ? consoleOutput.join("\n")
+          : "No output yet.";
 
       richPrompt = `
 [CONTEXT: The user is currently viewing Step ${currentStepIndex} of the simulation.]
-- Current Line Executing: ${activeLine ?? "N/A"}
-- Current Call Stack Depth: ${stackDepth}
-- Current Local Variables (Scope): ${activeVars}
-- Current Call Stack: ${stackTrace}
 
+--- CURRENT EXECUTION STATE ---
+- Current Executing Line: ${activeLine ?? "N/A"}
+- Call Stack Depth: ${stackDepth}
+- Current Call Stack:
+${stackTrace}
+
+--- LOCAL VARIABLES (SCOPE) ---
+${activeVars}
+
+--- RECURSION/EXECUTION TREE NODE ---
+- Current Node Info: ${treeNodeContext}
+
+--- STDOUT (CONSOLE OUTPUT) ---
+${stdoutCtx}
+
+---------------------------------
 User Question: ${textContent}
 `;
     }
@@ -231,7 +256,7 @@ User Question: ${textContent}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
             className={`bg-white dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl mb-4 overflow-hidden flex flex-col transition-all duration-300 ${
               isExpanded
-                ? "fixed top-4 left-4 right-4 bottom-[88px] sm:w-auto h-auto max-h-none z-[60]"
+                ? "fixed top-4 left-4 right-4 bottom-[88px] sm:w-auto h-auto min-h-[500px] max-h-none z-[60]"
                 : "w-[350px] sm:w-[400px] h-[500px] max-h-[80vh] relative"
             }`}
           >
@@ -336,7 +361,7 @@ User Question: ${textContent}
             </div>
 
             {/* Chat Input */}
-            <div className="p-3 bg-white dark:bg-[#0f0f0f] border-t border-slate-200 dark:border-white/5 shrink-0">
+            <div className="p-3 bg-white dark:bg-[#0f0f0f] border-t border-slate-200 dark:border-white/5 shrink-0 w-full mt-auto">
               {attachedImages.length > 0 && (
                 <div className="flex flex-wrap gap-3 mb-3 ml-2">
                   {attachedImages.map((img, idx) => (

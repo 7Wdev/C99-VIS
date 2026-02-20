@@ -1109,6 +1109,7 @@ const App: React.FC = () => {
         currentStack={currentStack}
         currentLine={simData?.steps[currentStepIdx]?.L ?? null}
         currentStepIndex={currentStepIdx}
+        consoleOutput={consoleOutput}
       />
     </div>
   );
