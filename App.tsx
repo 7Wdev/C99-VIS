@@ -439,6 +439,7 @@ const App: React.FC = () => {
                   currentStepIndex={currentStepIdx}
                   totalSteps={simData?.steps.length || 0}
                   currentState={currentState}
+                  simData={simData}
                   onNext={handleNext}
                   onPrev={handlePrev}
                   isAutoPlaying={isAutoPlaying}
@@ -578,6 +579,7 @@ const App: React.FC = () => {
               currentStepIndex={currentStepIdx}
               totalSteps={simData?.steps.length || 0}
               currentState={currentState}
+              simData={simData}
               onNext={handleNext}
               onPrev={handlePrev}
               isAutoPlaying={isAutoPlaying}
