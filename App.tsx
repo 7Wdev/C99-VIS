@@ -30,6 +30,17 @@ import { PanelGroup, Panel, PanelResizeHandle } from "react-resizable-panels";
 import ResizeHandle from "./components/ResizeHandle";
 import StdoutPanel from "./components/StdoutPanel";
 
+const LOADING_PHRASES = [
+  "Traversing recursive pathways and logic states...",
+  "Analyzing control flow and tracking variables...",
+  "Constructing call stack snapshots line by line...",
+  "Generating multi-dimensional array structures...",
+  "Synchronizing AST nodes with AI reasoning...",
+  "Evaluating pointer references and memory bounds...",
+  "Optimizing JSON serialization of execution data...",
+  "Running deep deterministic static analysis...",
+];
+
 const App: React.FC = () => {
   // Config State
   const [selectedPresetId, setSelectedPresetId] = useState<string>("subsets");
@@ -47,6 +58,16 @@ const App: React.FC = () => {
   const [simData, setSimData] = useState<SimulationData | null>(null);
   const [currentStepIdx, setCurrentStepIdx] = useState<number>(-1);
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
+  const [loadingPhraseIdx, setLoadingPhraseIdx] = useState(0);
+
+  useEffect(() => {
+    if (isSimulatingFull || isLoading) {
+      const interval = setInterval(() => {
+        setLoadingPhraseIdx((prev) => (prev + 1) % LOADING_PHRASES.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isSimulatingFull, isLoading]);
 
   // Responsive: detect desktop (≥1024px) for panel layout vs stacked
   const [isDesktop, setIsDesktop] = useState(() =>
@@ -647,7 +668,7 @@ const App: React.FC = () => {
             <div className="absolute inset-0 z-0 bg-gradient-to-radial from-transparent via-slate-200/50 to-slate-300/80 dark:via-[#050505]/80 dark:to-[#020202] pointer-events-none" />
 
             {/* --- Animated Neural Network SVG --- */}
-            <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center opacity-80 mix-blend-screen overflow-visible">
+            <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center opacity-30 dark:opacity-80 dark:mix-blend-screen overflow-visible">
               <svg
                 className="w-full h-full min-w-[100vw] min-h-[100vh] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
                 viewBox="0 0 1000 800"
@@ -913,15 +934,20 @@ const App: React.FC = () => {
                 </h1>
               </motion.div>
 
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-                className="text-lg text-slate-500 dark:text-white/50 font-medium mb-10 text-center max-w-lg leading-relaxed"
-              >
-                Traversing recursive pathways and extracting logic states via
-                Gemini API.
-              </motion.p>
+              <div className="h-16 flex items-center justify-center mb-10 w-full max-w-lg relative perspective-1000">
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={loadingPhraseIdx}
+                    initial={{ opacity: 0, rotateX: -20, y: 15 }}
+                    animate={{ opacity: 1, rotateX: 0, y: 0 }}
+                    exit={{ opacity: 0, rotateX: 20, y: -15 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    className="text-lg text-slate-500 dark:text-white/60 font-medium text-center leading-relaxed absolute"
+                  >
+                    {LOADING_PHRASES[loadingPhraseIdx]}
+                  </motion.p>
+                </AnimatePresence>
+              </div>
 
               {/* Dynamic Stats Row */}
               <motion.div
@@ -986,6 +1012,30 @@ const App: React.FC = () => {
                     ease: "easeInOut",
                   }}
                 />
+              </motion.div>
+
+              {/* Simulated AI Log Ticker */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 1, delay: 1 }}
+                className="mt-12 text-[10px] sm:text-xs font-mono text-slate-400 dark:text-white/30 uppercase tracking-widest flex items-center gap-3 drop-shadow-sm"
+              >
+                <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(255,23,68,0.8)] animate-pulse" />
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={loadingPhraseIdx}
+                    initial={{ opacity: 0, x: -5 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 5 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    OP_V{Math.floor(Math.random() * 90 + 10)} // STATUS:{" "}
+                    {LOADING_PHRASES[loadingPhraseIdx]
+                      .split(" ")[0]
+                      .toUpperCase()}
+                  </motion.span>
+                </AnimatePresence>
               </motion.div>
             </div>
           </motion.div>
