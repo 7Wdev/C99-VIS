@@ -38,6 +38,12 @@ const App: React.FC = () => {
 
   // Simulation State
   const [isLoading, setIsLoading] = useState(false);
+  const [isSimulatingFull, setIsSimulatingFull] = useState(false);
+  const [simulationProgress, setSimulationProgress] = useState<{
+    steps: number;
+    batches: number;
+    isComplete: boolean;
+  }>({ steps: 0, batches: 0, isComplete: false });
   const [simData, setSimData] = useState<SimulationData | null>(null);
   const [currentStepIdx, setCurrentStepIdx] = useState<number>(-1);
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
@@ -99,6 +105,8 @@ const App: React.FC = () => {
 
   const handleBuild = async () => {
     setIsLoading(true);
+    setIsSimulatingFull(true);
+    setSimulationProgress({ steps: 0, batches: 0, isComplete: false });
     setSimData(null);
     setCurrentStepIdx(-1);
     setConsoleOutput([]);
@@ -107,26 +115,31 @@ const App: React.FC = () => {
       alert("Please configure your Gemini API Key in Settings first.");
       setShowSettings(true);
       setIsLoading(false);
+      setIsSimulatingFull(false);
       return;
     }
 
     sessionRef.current = new SimulationSession(customApiKey);
 
-    // Call Gemini
+    // Call Gemini for the first batch
     let data = await sessionRef.current.start(code, inputVal);
 
     if (data) {
       setSimData(data);
       setCurrentStepIdx(0);
-      // Initial console state
       if (data.steps[0]?.out) {
         setConsoleOutput([data.steps[0].out]);
       }
+      setSimulationProgress({
+        steps: data.steps.length,
+        batches: 1,
+        isComplete: !!data.isComplete,
+      });
 
       // Automatically fetch more batches until isComplete is true
       let currentData = data;
       let sanityLimit = 0;
-      while (!currentData.isComplete && sanityLimit < 15) {
+      while (!currentData.isComplete && sanityLimit < 20) {
         sanityLimit++;
         const moreData = await sessionRef.current?.nextBatch();
         if (!moreData) break;
@@ -134,11 +147,18 @@ const App: React.FC = () => {
         setSimData((prev) => {
           if (!prev) return moreData;
           return {
-            ...moreData, // Keep latest isComplete, pointers, complexity
+            ...moreData,
             steps: [...prev.steps, ...moreData.steps],
-            tree: { ...prev.tree, ...moreData.tree }, // Merge trees
+            tree: { ...prev.tree, ...moreData.tree },
           };
         });
+
+        setSimulationProgress((prev) => ({
+          steps: prev.steps + moreData.steps.length,
+          batches: prev.batches + 1,
+          isComplete: !!moreData.isComplete,
+        }));
+
         currentData = moreData;
       }
     } else {
@@ -146,8 +166,14 @@ const App: React.FC = () => {
         "Failed to generate simulation. Please check the API key or try simpler code.",
       );
     }
+
     setIsAutoPlaying(false);
     setIsLoading(false);
+
+    // Give a short delay before dropping the loader completely for smoothness
+    setTimeout(() => {
+      setIsSimulatingFull(false);
+    }, 500);
   };
 
   const handleNext = useCallback(() => {
@@ -605,7 +631,352 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Settings Modal */}
+      {/* Full Screen Loading Overlay */}
+      <AnimatePresence>
+        {isSimulatingFull && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{
+              opacity: 0,
+              transition: { duration: 0.8, ease: "easeInOut" },
+            }}
+            className="fixed inset-0 z-[150] flex flex-col items-center justify-center overflow-hidden bg-[#050505] font-sans text-white/90"
+          >
+            {/* Background Vignettting */}
+            <div className="absolute inset-0 z-0 bg-gradient-to-radial from-transparent via-[#050505]/80 to-[#020202] pointer-events-none" />
+
+            {/* --- Animated Neural Network SVG --- */}
+            <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center opacity-80 mix-blend-screen overflow-visible">
+              <svg
+                className="w-full h-full min-w-[100vw] min-h-[100vh] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                viewBox="0 0 1000 800"
+                preserveAspectRatio="xMidYMid slice"
+              >
+                <defs>
+                  {/* Glowing Red Node Filter */}
+                  <filter
+                    id="glowRed"
+                    x="-50%"
+                    y="-50%"
+                    width="200%"
+                    height="200%"
+                  >
+                    <feGaussianBlur stdDeviation="6" result="coloredBlur" />
+                    <feMerge>
+                      <feMergeNode in="coloredBlur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                  {/* Glowing White Node Filter */}
+                  <filter
+                    id="glowWhite"
+                    x="-50%"
+                    y="-50%"
+                    width="200%"
+                    height="200%"
+                  >
+                    <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+                    <feMerge>
+                      <feMergeNode in="coloredBlur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                  {/* Pulse Animation for Lines */}
+                  <linearGradient
+                    id="linePulse"
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="0%"
+                  >
+                    <stop offset="0%" stopColor="#111" />
+                    <stop offset="50%" stopColor="#ff1744" />
+                    <stop offset="100%" stopColor="#111" />
+                  </linearGradient>
+                </defs>
+
+                {/* --- Connections (Synapses) --- */}
+                {/* Use a set of paths with stroke-dasharray animations to look like data traveling */}
+                {[
+                  // Layer 1 to 2
+                  { path: "M200,200 L400,100", d: 1 },
+                  { path: "M200,200 L400,300", d: 1.5 },
+                  { path: "M200,200 L400,500", d: 2 },
+                  { path: "M200,400 L400,300", d: 1.2 },
+                  { path: "M200,400 L400,500", d: 1.7 },
+                  { path: "M200,400 L400,700", d: 2.2 },
+                  { path: "M200,600 L400,500", d: 1.1 },
+                  { path: "M200,600 L400,700", d: 1.6 },
+
+                  // Layer 2 to 3 (Hidden)
+                  { path: "M400,100 L600,200", d: 2.5 },
+                  { path: "M400,100 L600,400", d: 3 },
+                  { path: "M400,300 L600,200", d: 2.1 },
+                  { path: "M400,300 L600,400", d: 2.6 },
+                  { path: "M400,300 L600,600", d: 3.1 },
+                  { path: "M400,500 L600,400", d: 2.2 },
+                  { path: "M400,500 L600,600", d: 2.7 },
+                  { path: "M400,700 L600,600", d: 2.3 },
+
+                  // Layer 3 to Output
+                  { path: "M600,200 L800,300", d: 3.5 },
+                  { path: "M600,200 L800,500", d: 4 },
+                  { path: "M600,400 L800,300", d: 3.1 },
+                  { path: "M600,400 L800,500", d: 3.6 },
+                  { path: "M600,600 L800,500", d: 3.2 },
+                ].map((conn, i) => (
+                  <g key={`conn-${i}`}>
+                    {/* Base dim connection line */}
+                    <path
+                      d={conn.path}
+                      stroke="#222"
+                      strokeWidth="1.5"
+                      fill="none"
+                    />
+                    {/* Glowing pulse riding the path */}
+                    <motion.path
+                      d={conn.path}
+                      stroke="url(#linePulse)"
+                      strokeWidth="2"
+                      fill="none"
+                      initial={{ pathLength: 0, pathOffset: 0, opacity: 0 }}
+                      animate={{
+                        pathLength: [0, 0.2, 0],
+                        pathOffset: [0, 0.8, 1],
+                        opacity: [0, 1, 0],
+                      }}
+                      transition={{
+                        duration: 2.5,
+                        repeat: Infinity,
+                        ease: "linear",
+                        delay: conn.d,
+                      }}
+                    />
+                  </g>
+                ))}
+
+                {/* --- Nodes (Neurons) --- */}
+                {[
+                  // Input Layer
+                  {
+                    cx: 200,
+                    cy: 200,
+                    r: 8,
+                    color: "white",
+                    glow: "glowWhite",
+                    delay: 0,
+                  },
+                  {
+                    cx: 200,
+                    cy: 400,
+                    r: 10,
+                    color: "red",
+                    glow: "glowRed",
+                    delay: 0.5,
+                  },
+                  {
+                    cx: 200,
+                    cy: 600,
+                    r: 8,
+                    color: "white",
+                    glow: "glowWhite",
+                    delay: 1,
+                  },
+
+                  // Hidden Layer 1
+                  {
+                    cx: 400,
+                    cy: 100,
+                    r: 7,
+                    color: "white",
+                    glow: "glowWhite",
+                    delay: 1.2,
+                  },
+                  {
+                    cx: 400,
+                    cy: 300,
+                    r: 12,
+                    color: "red",
+                    glow: "glowRed",
+                    delay: 0.2,
+                  },
+                  {
+                    cx: 400,
+                    cy: 500,
+                    r: 9,
+                    color: "white",
+                    glow: "glowWhite",
+                    delay: 1.5,
+                  },
+                  {
+                    cx: 400,
+                    cy: 700,
+                    r: 11,
+                    color: "red",
+                    glow: "glowRed",
+                    delay: 0.8,
+                  },
+
+                  // Hidden Layer 2
+                  {
+                    cx: 600,
+                    cy: 200,
+                    r: 10,
+                    color: "red",
+                    glow: "glowRed",
+                    delay: 1.8,
+                  },
+                  {
+                    cx: 600,
+                    cy: 400,
+                    r: 14,
+                    color: "white",
+                    glow: "glowWhite",
+                    delay: 0.3,
+                  },
+                  {
+                    cx: 600,
+                    cy: 600,
+                    r: 8,
+                    color: "red",
+                    glow: "glowRed",
+                    delay: 1.1,
+                  },
+
+                  // Output Layer
+                  {
+                    cx: 800,
+                    cy: 300,
+                    r: 16,
+                    color: "red",
+                    glow: "glowRed",
+                    delay: 2.2,
+                  },
+                  {
+                    cx: 800,
+                    cy: 500,
+                    r: 12,
+                    color: "white",
+                    glow: "glowWhite",
+                    delay: 2.5,
+                  },
+                ].map((node, i) => (
+                  <motion.circle
+                    key={`node-${i}`}
+                    cx={node.cx}
+                    cy={node.cy}
+                    r={node.r}
+                    fill={node.color === "red" ? "#ff1744" : "#ffffff"}
+                    filter={`url(#${node.glow})`}
+                    animate={{
+                      r: [node.r, node.r * 1.4, node.r],
+                      opacity: [0.6, 1, 0.6],
+                    }}
+                    transition={{
+                      duration: node.color === "red" ? 1.5 : 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: node.delay,
+                    }}
+                  />
+                ))}
+              </svg>
+            </div>
+
+            {/* --- Core Text & Progress Overlay --- */}
+            {/* We position this highly visible over the animation */}
+            <div className="relative z-10 flex flex-col items-center max-w-2xl px-8 mt-[20vh]">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="flex items-center gap-4 mb-3"
+              >
+                <div className="p-2.5 bg-red-600/20 rounded-2xl border border-red-500/30 backdrop-blur-md">
+                  <Cpu size={32} className="text-red-500" />
+                </div>
+                <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/50 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                  Simulating Execution
+                </h1>
+              </motion.div>
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="text-lg text-white/50 font-medium mb-10 text-center max-w-lg leading-relaxed"
+              >
+                Traversing recursive pathways and extracting logic states via
+                Gemini API.
+              </motion.p>
+
+              {/* Dynamic Stats Row */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.6 }}
+                className="flex items-center gap-6 md:gap-12 mb-12"
+              >
+                <div className="flex flex-col items-center">
+                  <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-red-500/80 mb-1">
+                    Current Batch
+                  </span>
+                  <div className="text-3xl font-mono font-light text-white flex items-baseline">
+                    <motion.span
+                      key={simulationProgress.batches}
+                      initial={{ y: -10, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                    >
+                      {String(simulationProgress.batches).padStart(2, "0")}
+                    </motion.span>
+                  </div>
+                </div>
+
+                {/* Vertical Divider */}
+                <div className="w-px h-12 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
+
+                <div className="flex flex-col items-center">
+                  <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/40 mb-1">
+                    Steps Decoded
+                  </span>
+                  <div className="text-3xl font-mono font-light text-white flex items-baseline gap-1">
+                    <motion.span
+                      key={simulationProgress.steps}
+                      initial={{ scale: 1.2, color: "#ff1744" }}
+                      animate={{ scale: 1, color: "#ffffff" }}
+                    >
+                      {simulationProgress.steps}
+                    </motion.span>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Minimalist Progress Line */}
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: "100%", opacity: 1 }}
+                transition={{ duration: 1, delay: 0.8 }}
+                className="w-full max-w-md h-px bg-white/10 relative overflow-hidden"
+              >
+                {/* The "Head" of the progress */}
+                <motion.div
+                  className="absolute top-0 bottom-0 left-0 bg-gradient-to-r from-transparent via-red-500 to-white w-[30%]"
+                  animate={{
+                    x: ["-100%", "333%"],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                />
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Settings Modal */}
       <AnimatePresence>
         {showSettings && (

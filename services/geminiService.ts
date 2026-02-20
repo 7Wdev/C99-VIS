@@ -156,7 +156,21 @@ export class SimulationSession {
           .replace(/```json/g, "")
           .replace(/```/g, "")
           .trim();
-        const data: SimulationData = JSON.parse(jsonStr);
+
+        let data: SimulationData;
+        try {
+          data = JSON.parse(jsonStr);
+        } catch (parseError) {
+          console.error(
+            "Gemini API returned invalid JSON in start():",
+            parseError,
+          );
+          console.debug("Raw JSON String:", jsonStr);
+          throw new Error(
+            "Failed to parse Gemini response as JSON. The output may have been truncated.",
+          );
+        }
+
         return normalizeData(data);
       });
     } catch (error) {
@@ -172,7 +186,7 @@ export class SimulationSession {
       return await this.retryWithBackoff(async () => {
         const response = await this.chat.sendMessage({
           message:
-            "Continue simulation. Generate the next batch of steps. Remember to maintain state and tree consistency. CRITICAL INSTRUCTION: You MUST generate as many simulation steps as mathematically possible in this single JSON batch before hitting output token limits. Aim for 200+ steps if execution continues. Do not intentionally stop early.",
+            "Continue simulation. Generate the next batch of steps. Remember to maintain state and tree consistency. CRITICAL INSTRUCTION: Aim for around 40-70+ steps per batch depending on code complexity to ensure you do not exceed output token limits and produce valid, complete JSON. You must properly close the JSON object.",
         });
 
         const text = response.text;
@@ -182,7 +196,21 @@ export class SimulationSession {
           .replace(/```json/g, "")
           .replace(/```/g, "")
           .trim();
-        const data: SimulationData = JSON.parse(jsonStr);
+
+        let data: SimulationData;
+        try {
+          data = JSON.parse(jsonStr);
+        } catch (parseError) {
+          console.error(
+            "Gemini API returned invalid JSON in nextBatch():",
+            parseError,
+          );
+          console.debug("Raw JSON String:", jsonStr);
+          throw new Error(
+            "Failed to parse Gemini response as JSON. The output may have been truncated.",
+          );
+        }
+
         return normalizeData(data);
       });
     } catch (error) {
