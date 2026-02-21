@@ -86,7 +86,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               Depth:{" "}
               {currentState.h !== undefined && currentState.h !== null
                 ? currentState.h
-                : currentState.stack && currentState.stack.length > 0
+                : Array.isArray(currentState.stack) &&
+                    currentState.stack.length > 0
                   ? currentState.stack.filter(
                       (frame) =>
                         frame.func ===
