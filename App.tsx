@@ -186,7 +186,10 @@ const App: React.FC = () => {
         // Grab the last 15 steps as a strict context window so the AI doesn't hallucinate jumps
         const lastStepsContext = currentData.steps.slice(-15);
 
-        const moreData = await sessionRef.current?.nextBatch(lastStepsContext);
+        const moreData = await sessionRef.current?.nextBatch(
+          lastStepsContext,
+          currentData.tree,
+        );
         if (!moreData) break;
 
         setSimData((prev) => {
@@ -294,7 +297,7 @@ const App: React.FC = () => {
     // Identify ancestors of the current active node
     const ancestors = new Set<string>();
     let curr = activeNodeId;
-    while (curr && simData.tree[curr]) {
+    while (curr && simData.tree[curr] && !ancestors.has(curr)) {
       ancestors.add(curr);
       curr = simData.tree[curr].p;
     }

@@ -48,7 +48,9 @@ const Visualizer: React.FC<VisualizerProps> = ({
   useEffect(() => {
     if (nodes.length > 0 && containerRef.current) {
       const { width } = containerRef.current.getBoundingClientRect();
-      const root = nodes.find((n) => !n.parent);
+      const root = nodes.find(
+        (n) => !n.parent || n.parent.data.id === "__SUPER_ROOT__",
+      );
       if (root) {
         setTransform((prev) => ({
           ...prev,
@@ -115,7 +117,9 @@ const Visualizer: React.FC<VisualizerProps> = ({
   const fitView = () => {
     if (nodes.length > 0 && containerRef.current) {
       const { width } = containerRef.current.getBoundingClientRect();
-      const root = nodes.find((n) => !n.parent);
+      const root = nodes.find(
+        (n) => !n.parent || n.parent.data.id === "__SUPER_ROOT__",
+      );
       if (root) {
         setTransform({
           x: width / 2 - root.x * 0.9,

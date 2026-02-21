@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { SimulationData, SYSTEM_PROMPT } from "../types";
+import { SimulationData, SYSTEM_PROMPT, TreeNode } from "../types";
 
 const defaultApiKey = process.env.API_KEY || "";
 
@@ -7,7 +7,10 @@ const defaultApiKey = process.env.API_KEY || "";
 // Since we need to access process.env.API_KEY which might be injected, we'll instantiate inside.
 
 // Helper to backfill missing arrays and scalars to ensure no flickering
-const normalizeData = (data: SimulationData): SimulationData => {
+const normalizeData = (
+  data: SimulationData,
+  prevTree?: Record<string, TreeNode>,
+): SimulationData => {
   const steps = data.steps;
   // Track the last known state of arrays to fill gaps globally
   const persistentArrays: Record<string, any[]> = {};
@@ -82,7 +85,11 @@ const normalizeData = (data: SimulationData): SimulationData => {
     // --- 3. TREE NODE NORMALIZATION ---
     // If the model generates a step with a node ID that it forgot to place in the tree object,
     // the D3 hierarchy layout will crash or render empty. We must inject a dummy node.
-    if (step.n && !data.tree[step.n]) {
+    // However, if the node already exists in the previous batches' tree, it is NOT missing.
+    const existsLocally = !!data.tree[step.n];
+    const existsHistorically = prevTree && !!prevTree[step.n];
+
+    if (step.n && !existsLocally && !existsHistorically) {
       console.warn(
         `Node ${step.n} referenced in step ${i} but missing from tree. Normalizing.`,
       );
@@ -248,7 +255,10 @@ export class SimulationSession {
     }
   }
 
-  async nextBatch(lastStepsContext?: any[]): Promise<SimulationData | null> {
+  async nextBatch(
+    lastStepsContext?: any[],
+    prevTree?: Record<string, TreeNode>,
+  ): Promise<SimulationData | null> {
     if (!this.chat) return null;
 
     try {
@@ -291,7 +301,7 @@ export class SimulationSession {
           );
         }
 
-        return normalizeData(data);
+        return normalizeData(data, prevTree);
       });
     } catch (error) {
       console.error("Gemini API Error (Next Batch):", error);
