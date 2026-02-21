@@ -84,16 +84,14 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
           {currentState && (
             <span className="text-[9px] bg-white/20 text-white px-1.5 py-0.5 rounded border border-white/30 font-mono shadow-sm">
               Depth:{" "}
-              {currentState.h !== undefined && currentState.h !== null
-                ? currentState.h
-                : Array.isArray(currentState.stack) &&
-                    currentState.stack.length > 0
-                  ? currentState.stack.filter(
-                      (frame) =>
-                        frame.func ===
-                        currentState.stack[currentState.stack.length - 1].func,
-                    ).length - 1
-                  : "?"}
+              {Array.isArray(currentState.stack) &&
+              currentState.stack.length > 0
+                ? currentState.stack.filter(
+                    (frame) =>
+                      frame.func ===
+                      currentState.stack[currentState.stack.length - 1].func,
+                  ).length - 1
+                : "?"}
             </span>
           )}
         </div>
