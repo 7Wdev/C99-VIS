@@ -222,20 +222,28 @@ const Visualizer: React.FC<VisualizerProps> = ({
               const isBacktracked = backtrackedNodes.has(nodeId);
 
               // Robust Label Parsing
+              let funcName = "";
               let labelArgs = "";
               let labelInfo = "";
 
               try {
                 let fullLabel = node.data.details.l || "";
-                // Strip potential function wrapper names "func(args)" -> "args"
-                const match = fullLabel.match(/^[a-zA-Z0-9_]+\((.*)\)$/);
-                if (match) fullLabel = match[1];
 
+                // First split off the INFO portion separated by "|"
                 if (fullLabel.includes("|")) {
                   const parts = fullLabel.split("|");
-                  labelArgs = parts[0].trim();
                   labelInfo = parts.slice(1).join("|").trim();
+                  fullLabel = parts[0].trim(); // remaining is funcName(args) or just args
+                }
+
+                // Extract function name and arguments
+                // Pattern: funcName(args)
+                const match = fullLabel.match(/^([a-zA-Z0-9_]+)\((.*)\)$/);
+                if (match) {
+                  funcName = match[1];
+                  labelArgs = match[2];
                 } else {
+                  // Fallback if no function wrapper is found
                   labelArgs = fullLabel;
                 }
               } catch (e) {
@@ -246,10 +254,17 @@ const Visualizer: React.FC<VisualizerProps> = ({
               const charWidth = 7;
               const padding = 30;
               const baseHeight = 32;
-              const extraHeight = labelInfo ? 18 : 0;
+
+              // Base height supports args. If we have a funcName, we need extra height.
+              // If we have labelInfo, we need another chunk of extra height.
+              let extraHeight = 0;
+              if (funcName) extraHeight += 16;
+              if (labelInfo) extraHeight += 16;
+
               const rectHeight = baseHeight + extraHeight;
 
               const maxTextLen = Math.max(
+                funcName.length,
                 labelArgs.length,
                 labelInfo ? labelInfo.length : 0,
               );
@@ -392,8 +407,26 @@ const Visualizer: React.FC<VisualizerProps> = ({
                     fill={textColor}
                     className="font-mono font-bold select-none pointer-events-none tracking-tight"
                   >
+                    {/* Function Name (Optional) */}
+                    {funcName && (
+                      <tspan
+                        x="0"
+                        dy={-(rectHeight / 2) + 20}
+                        fontSize="12px"
+                        fill={
+                          isActive ? "#f87171" : isDark ? "#94a3b8" : "#475569"
+                        }
+                      >
+                        {funcName}
+                      </tspan>
+                    )}
+
                     {/* Primary Args - Smaller font */}
-                    <tspan x="0" dy={labelInfo ? "-6" : "4"} fontSize="11px">
+                    <tspan
+                      x="0"
+                      dy={funcName ? "14" : labelInfo ? "-2" : "4"}
+                      fontSize="11px"
+                    >
                       {labelArgs}
                     </tspan>
 
@@ -401,7 +434,7 @@ const Visualizer: React.FC<VisualizerProps> = ({
                     {labelInfo && (
                       <tspan
                         x="0"
-                        dy="16"
+                        dy="15"
                         fontSize="9px"
                         fill={
                           nodeType === "dead"

@@ -90,8 +90,25 @@ const normalizeData = (data: SimulationData): SimulationData => {
       let parentNode = null;
       if (i > 0 && steps[i - 1].n) parentNode = steps[i - 1].n;
 
+      // Determine a better label than just "normalized node"
+      let fallbackLabel = "recovered node";
+      if (step.s && step.s.stack && step.s.stack.length > 0) {
+        const currentFrame = step.s.stack[step.s.stack.length - 1];
+        if (currentFrame.func) {
+          // Attempt to stringify args
+          let argsStr = "";
+          if (currentFrame.args) {
+            const argEntries = Object.entries(currentFrame.args);
+            if (argEntries.length > 0) {
+              argsStr = argEntries.map(([k, v]) => `${k}=${v}`).join(", ");
+            }
+          }
+          fallbackLabel = `${currentFrame.func}(${argsStr}) | recovered`;
+        }
+      }
+
       data.tree[step.n] = {
-        l: "normalized node",
+        l: fallbackLabel,
         p: parentNode,
         level:
           parentNode && data.tree[parentNode]

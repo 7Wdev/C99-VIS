@@ -255,7 +255,10 @@ const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
               const { display, memory, isGarbage } = formatCellData(val);
 
               return (
-                <div key={`${rIndex}-${cIndex}`} className="relative group">
+                <div
+                  key={`${rIndex}-${cIndex}`}
+                  className="relative group hover:z-[60]"
+                >
                   <motion.div
                     layoutId={`${name}-cell-${rIndex}-${cIndex}`}
                     className={`
