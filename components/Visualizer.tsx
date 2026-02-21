@@ -61,6 +61,24 @@ const Visualizer: React.FC<VisualizerProps> = ({
     }
   }, [nodes.length]);
 
+  // Auto-pan to active node as simulation progresses
+  useEffect(() => {
+    if (activeNodeId && nodes.length > 0 && containerRef.current) {
+      const { width, height } = containerRef.current.getBoundingClientRect();
+      const activeLayoutNode = nodes.find((n) => n.data.id === activeNodeId);
+
+      if (activeLayoutNode) {
+        setTransform((prev) => ({
+          ...prev,
+          // Center X in the middle of canvas
+          x: width / 2 - activeLayoutNode.x * prev.k,
+          // Place Y roughly 1/3 down the canvas so we can see children below it
+          y: Math.max(50, height / 3 - activeLayoutNode.y * prev.k),
+        }));
+      }
+    }
+  }, [activeNodeId]); // Intentional dependency array: only trigger when activeNodeId changes
+
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const scaleFactor = e.deltaY > 0 ? 0.9 : 1.1;

@@ -293,12 +293,12 @@ const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
                         </div>
                       )}
                     </motion.div>
-
-                    {/* Coordinate Tooltip on Hover */}
-                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 dark:bg-black text-white text-[10px] font-bold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap z-50 shadow-xl border border-slate-600 dark:border-white/10">
-                      [{rIndex}][{cIndex}]
-                    </div>
                   </motion.div>
+
+                  {/* Coordinate Tooltip on Hover */}
+                  <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 dark:bg-black text-white text-[10px] font-bold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap z-50 shadow-xl border border-slate-600 dark:border-white/10">
+                    [{rIndex}][{cIndex}]
+                  </div>
 
                   {/* Active Coordinate Label Overlay */}
                   <AnimatePresence>

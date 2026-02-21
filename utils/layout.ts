@@ -96,9 +96,9 @@ export const calculateTreeLayout = (
   );
 
   // Layout Configuration
-  // Increase gap for forest layout visually
-  const NODE_SIZE_X = 260;
-  const LEVEL_HEIGHT = 130;
+  // Increase gap for forest layout visually (Updated to prevent wide label overlap)
+  const NODE_SIZE_X = 350;
+  const LEVEL_HEIGHT = 150;
 
   const leafCount = root.leaves().length;
   const depth = root.height;
